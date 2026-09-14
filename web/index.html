@@ -1,4 +1,142 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>拾忆 · 你的私人记忆空间</title><meta name="description" content="随手记录文字、图片、链接与声音，留待需要时找回。"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%232b3955'/%3E%3Cpath d='M12 12h16v16H12z' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E"><link rel="stylesheet" href="/style.css"></head><body>
-<aside class="rail"><button class="logo" id="home" aria-label="回到首页">▣</button><nav><button data-view="library" aria-label="全部记忆">▤<span>记忆</span></button><button data-view="topics" aria-label="主题集合">▦<span>主题</span></button><button data-view="tasks" aria-label="行动提醒">◷<span>行动</span></button><button data-view="trash" aria-label="回收站">⌫<span>回收站</span></button></nav><button id="account" class="account" aria-label="账号与 AI 设置">我</button></aside>
-<main><header><a href="/" class="wordmark">拾忆 <span>SHIYI</span></a><span class="headernote" id="connection">连接你的空间…</span></header><section class="quiet"><div class="greeting"><p class="eyebrow">A LITTLE SPACE FOR YOUR MIND</p><h1>先放在这里。<br><span>需要时，再想起来。</span></h1><p>一个念头，一段对话，或一句不想忘记的话。</p></div><div class="composer"><div class="modebar" role="group" aria-label="收集方式"><button class="active" data-mode="text">文字 / 链接</button><button data-mode="image">图片</button><button data-mode="audio">声音</button></div><textarea id="thought" aria-label="要保存的内容" placeholder="随手写点什么，也可以粘贴链接…" maxlength="20000"></textarea><div id="attachmentArea" hidden><label class="filepick" id="filepick"><span id="filelabel">选择图片，或拖到这里</span><input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden></label><div id="attachmentPreview"></div></div><div id="recordArea" hidden><button id="record" class="record">● 开始录音</button><span id="recordState">最长 2 分钟，可先试听再保存</span></div><div class="composerfoot"><span id="savehint">链接会被保存，只有点击时才打开。</span><button id="save" class="primary">收好 ↗</button></div></div><p class="privacy">资料保存在你的私有账号空间 · AI 仅在你点击处理时使用</p><div class="searchline"><span>⌕</span><input id="search" aria-label="找回记忆" placeholder="记得哪个词？找一找…"><kbd>⌘ K</kbd></div><div id="homeResults" hidden></div><div class="recentline"><button data-view="library">打开记忆库 <span id="total">0</span> ↗</button><button id="trydemo">看看整理后的样子</button></div><div id="banner" role="status"></div></section><footer><span>留住内容，也留住当时的想法。</span><button id="aboutai">AI 能帮我做什么？</button></footer></main>
-<dialog id="panel" class="panel"><div class="paneltop"><div><p class="eyebrow">YOUR MEMORY SPACE</p><h2 id="paneltitle">全部记忆</h2></div><button data-close="panel" aria-label="关闭侧栏">×</button></div><div id="panelbody"></div></dialog><dialog id="detail"><div class="modalhead"><h2>这段记忆</h2><button data-close="detail" aria-label="关闭详情">×</button></div><div id="detailbody"></div></dialog><dialog id="confirm"><div class="modalhead"><h2>移到回收站？</h2><button data-close="confirm" aria-label="取消删除">×</button></div><p>它将不再出现在搜索和行动中。你可以在回收站恢复；原始文件仍保留。</p><div class="actions"><button data-close="confirm">保留</button><button id="confirmDelete" class="danger">移到回收站</button></div></dialog><dialog id="accountDialog"><div class="modalhead"><h2>账号与 AI</h2><button data-close="accountDialog" aria-label="关闭账号设置">×</button></div><div id="accountbody"></div></dialog><div id="toast" role="status"></div><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>拾忆 · 让存下的东西真的回来</title>
+  <meta name="description" content="记录保存目的和记忆线索，让截图、链接和念头在合适的时候重新出现。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23273531'/%3E%3Cpath d='M12 12h16v16H12z' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <aside class="rail">
+    <button class="logo" id="home" aria-label="回到首页">拾</button>
+    <nav aria-label="主要功能">
+      <button data-view="library" aria-label="全部记忆"><span class="navicon">▤</span><span>记忆</span></button>
+      <button data-view="recall" aria-label="凭线索找回"><span class="navicon">⌕</span><span>找回</span></button>
+      <button data-view="tasks" aria-label="等待处理"><span class="navicon">◷</span><span>行动</span></button>
+      <button data-view="resurface" aria-label="再次出现"><span class="navicon">◫</span><span>再见</span></button>
+      <button data-view="trash" aria-label="回收站"><span class="navicon">⌫</span><span>回收站</span></button>
+    </nav>
+    <button id="account" class="account" aria-label="账号与能力说明">我</button>
+  </aside>
+
+  <main>
+    <header>
+      <a href="/" class="wordmark">拾忆 <span>SHIYI</span></a>
+      <span class="headernote" id="connection">连接你的空间…</span>
+    </header>
+
+    <section class="workspace">
+      <div class="greeting">
+        <p class="eyebrow">SAVE THE REASON, NOT JUST THE FILE</p>
+        <h1>不只存下来，<br><span>还要记得为什么。</span></h1>
+        <p>截图、链接、声音和一闪而过的念头，都可以留下当时的目的与线索。</p>
+      </div>
+
+      <div class="composer" id="composer">
+        <div class="modebar" role="group" aria-label="收集方式">
+          <button class="active" data-mode="text">文字 / 链接</button>
+          <button data-mode="image">图片 / 截图</button>
+          <button data-mode="audio">声音</button>
+        </div>
+
+        <div id="attachmentArea" hidden>
+          <label class="filepick" id="filepick">
+            <span id="filelabel">选择图片，或拖到这里</span>
+            <input id="file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          </label>
+          <div id="attachmentPreview"></div>
+        </div>
+
+        <div id="recordArea" hidden>
+          <button id="record" class="record">● 开始录音</button>
+          <span id="recordState">最长 2 分钟，可先试听再保存</span>
+        </div>
+
+        <textarea id="thought" aria-label="内容或补充说明" placeholder="随手写点什么，也可以粘贴链接…" maxlength="20000"></textarea>
+
+        <div class="captureMeta">
+          <div>
+            <span class="metaLabel">为什么存？</span>
+            <div class="intentChips" id="intentChips" role="group" aria-label="保存目的">
+              <button data-intent="想买">想买</button>
+              <button data-intent="想学">想学</button>
+              <button data-intent="想做">想做</button>
+              <button data-intent="想试试">想试试</button>
+              <button class="active" data-intent="留作参考">留作参考</button>
+              <button data-intent="只是好笑">只是好笑</button>
+            </div>
+          </div>
+          <div class="metaGrid">
+            <label>以后可能用什么词找？<input id="clue" maxlength="120" placeholder="例如：直播、歌名、日语口诀"></label>
+            <label>从哪里看到的？
+              <select id="source"><option value="">未填写</option><option>小红书</option><option>微信</option><option>直播</option><option>游戏</option><option>网页</option><option>相册</option><option>其他</option></select>
+            </label>
+          </div>
+          <div class="photoFields" id="photoFields" hidden>
+            <div class="photoPrompt"><span>风景复刻</span><p>知道地点时先告诉拾忆，不必等待识图也能保存成计划。</p></div>
+            <div class="metaGrid">
+              <label>这是哪里？<input id="place" maxlength="100" placeholder="例如：大理洱海西岸"></label>
+              <label>想怎么复刻？<input id="photoPlan" maxlength="240" placeholder="例如：傍晚去，站在栏杆左侧拍同款构图"></label>
+            </div>
+          </div>
+          <label class="revisitLabel">什么时候希望它再出现？
+            <select id="revisit"><option>不用提醒</option><option>今晚</option><option>三天后</option><option>下周</option><option>一个月后</option></select>
+          </label>
+        </div>
+
+        <div class="composerfoot">
+          <span id="savehint">保存内容，也保存你当时的目的。</span>
+          <button id="save" class="primary">收好</button>
+        </div>
+      </div>
+
+      <p class="privacy">资料按账号隔离保存 · 关键词找回不调用 AI · 照片识别只在主动点击时运行</p>
+
+      <div class="featureGrid" aria-label="主要入口">
+        <button data-focus-capture><span class="featureNo">01</span><strong>快速存下</strong><small>留下内容和目的</small></button>
+        <button data-view="recall"><span class="featureNo">02</span><strong>凭印象找</strong><small>关键词、来源、时间</small></button>
+        <button data-view="tasks"><span class="featureNo">03</span><strong>等我去做</strong><small>把收藏变成行动</small></button>
+        <button data-view="resurface"><span class="featureNo">04</span><strong>再看一眼</strong><small>每次只回来三条</small></button>
+      </div>
+
+      <section class="demoSpotlight">
+        <img src="/assets/demo-scenic-recreation.jpg" alt="山间湖泊与观景栏杆的风景照片演示">
+        <div>
+          <p class="eyebrow">PHOTO RECREATION · 演示数据</p>
+          <h2>一张风景照，也可以变成下一次出发</h2>
+          <p>记录地点、喜欢它的原因和想复刻的构图。以后开启单张识图时，还能补充画面内容与拍摄建议。</p>
+          <div class="demoTags"><span>想做</span><span>旅行</span><span>风景复刻</span></div>
+          <button id="openScenicDemo">查看这张记忆卡</button>
+        </div>
+      </section>
+
+      <div id="homeResults" hidden></div>
+      <div id="banner" role="status"></div>
+    </section>
+
+    <footer><span>不是帮你收藏更多，而是让存下的东西真的回来。</span><button id="aboutPhoto">照片识别怎么工作？</button></footer>
+  </main>
+
+  <dialog id="panel" class="panel">
+    <div class="paneltop"><div><p class="eyebrow">YOUR MEMORY SPACE</p><h2 id="paneltitle">全部记忆</h2></div><button data-close="panel" aria-label="关闭侧栏">×</button></div>
+    <div id="panelbody"></div>
+  </dialog>
+  <dialog id="detail">
+    <div class="modalhead"><h2>这段记忆</h2><button data-close="detail" aria-label="关闭详情">×</button></div>
+    <div id="detailbody"></div>
+  </dialog>
+  <dialog id="confirm">
+    <div class="modalhead"><h2>移到回收站？</h2><button data-close="confirm" aria-label="取消删除">×</button></div>
+    <p>它将不再出现在找回和行动中，你仍然可以从回收站恢复。</p>
+    <div class="actions"><button data-close="confirm">保留</button><button id="confirmDelete" class="danger">移到回收站</button></div>
+  </dialog>
+  <dialog id="accountDialog">
+    <div class="modalhead"><h2>账号与照片识别</h2><button data-close="accountDialog" aria-label="关闭说明">×</button></div>
+    <div id="accountbody"></div>
+  </dialog>
+  <div id="toast" role="status"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
