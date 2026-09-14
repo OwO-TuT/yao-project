@@ -14,6 +14,8 @@
 
 AI 通过服务端的 `OPENAI_API_KEY`、`AI_MODEL`（默认 gpt-4.1-mini）、`TRANSCRIBE_MODEL`（默认 gpt-4o-mini-transcribe）配置。密钥不得写入仓库或前端。未配置时明确返回 503，原始内容不受影响。实际模型可用性及质量还需配置后验证。
 
+当 OpenAI Developers 插件不可用时，用户可双击 `scripts/save-openai-key.command`，将项目 API Key 保存到 Git 已忽略的 `work/secrets/openai-api-key.txt`。部署配置成功后删除该临时文件。配置过程不得在终端输出、提交或把密钥发到聊天中。
+
 当前登录为 ChatGPT 平台登录，不是独立邮箱密码注册；私有原型访问范围未扩大。行动计划保存但不发送系统通知。网盘和商品链接不自动解析目标内容。AI 问答最多使用最近 40 条或指定匹配的 20 条文字资料，不是全库向量检索。
 
 删除为软删除，用户可在回收站恢复，原始文件仍保留。导出功能包含 JSON 文字资料及链接，不含原始附件。适用于小范围试用，不应宣称为完整生产级信息管理服务。
