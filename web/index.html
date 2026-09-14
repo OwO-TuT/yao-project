@@ -28,10 +28,13 @@
     </header>
 
     <section class="workspace">
-      <div class="greeting">
-        <p class="eyebrow">SAVE THE REASON, NOT JUST THE FILE</p>
-        <h1>不只存下来，<br><span>还要记得为什么。</span></h1>
-        <p>截图、链接、声音和一闪而过的念头，都可以留下当时的目的与线索。</p>
+      <div class="greetingWrap">
+        <div class="greeting">
+          <p class="eyebrow">SAVE THE REASON, NOT JUST THE FILE</p>
+          <h1>不只存下来，<br><span>还要记得为什么。</span></h1>
+          <p>截图、链接、声音和一闪而过的念头，都可以留下当时的目的与线索。</p>
+        </div>
+        <button id="reminderTicker" class="reminderTicker" data-view="tasks"><span>接下来</span><strong id="tickerText">正在读取需要提醒的内容…</strong></button>
       </div>
 
       <div class="composer" id="composer">
@@ -56,35 +59,46 @@
 
         <textarea id="thought" aria-label="内容或补充说明" placeholder="随手写点什么，也可以粘贴链接…" maxlength="20000"></textarea>
 
-        <div class="captureMeta">
-          <div>
-            <span class="metaLabel">为什么存？</span>
-            <div class="intentChips" id="intentChips" role="group" aria-label="保存目的">
-              <button data-intent="想买">想买</button>
-              <button data-intent="想学">想学</button>
-              <button data-intent="想做">想做</button>
-              <button data-intent="想试试">想试试</button>
-              <button class="active" data-intent="留作参考">留作参考</button>
-              <button data-intent="只是好笑">只是好笑</button>
+        <div class="understood" id="understood"><span>拾忆会从你的话里识别任务和时间</span><strong>例如“明天早上提醒我取快递”</strong></div>
+
+        <details class="captureOptions" id="captureOptions">
+          <summary><span>补充线索或修改理解</span><small>可选</small></summary>
+          <div class="captureMeta">
+            <div>
+              <span class="metaLabel">为什么存？</span>
+              <div class="intentChips" id="intentChips" role="group" aria-label="保存目的">
+                <button data-intent="必做">必做</button>
+                <button data-intent="想买">想买</button>
+                <button data-intent="想学">想学</button>
+                <button data-intent="想做">想做</button>
+                <button data-intent="想试试">想试试</button>
+                <button class="active" data-intent="留作参考">留作参考</button>
+                <button data-intent="备用">备用</button>
+                <button data-intent="只是好笑">只是好笑</button>
+              </div>
+              <label class="customIntent">其他原因<input id="intentDetail" maxlength="120" placeholder="例如：电子书备用，提醒我交作业"></label>
             </div>
-          </div>
-          <div class="metaGrid">
-            <label>以后可能用什么词找？<input id="clue" maxlength="120" placeholder="例如：直播、歌名、日语口诀"></label>
-            <label>从哪里看到的？
-              <select id="source"><option value="">未填写</option><option>小红书</option><option>微信</option><option>直播</option><option>游戏</option><option>网页</option><option>相册</option><option>其他</option></select>
-            </label>
-          </div>
-          <div class="photoFields" id="photoFields" hidden>
-            <div class="photoPrompt"><span>风景复刻</span><p>知道地点时先告诉拾忆，不必等待识图也能保存成计划。</p></div>
             <div class="metaGrid">
-              <label>这是哪里？<input id="place" maxlength="100" placeholder="例如：大理洱海西岸"></label>
-              <label>想怎么复刻？<input id="photoPlan" maxlength="240" placeholder="例如：傍晚去，站在栏杆左侧拍同款构图"></label>
+              <label>以后可能用什么词找？<input id="clue" maxlength="120" placeholder="例如：直播、歌名、日语口诀"></label>
+              <label>具体来源<input id="source" list="sourceSuggestions" maxlength="100" placeholder="例如：社交媒体 / B站 / 某位朋友"><datalist id="sourceSuggestions"><option value="社交媒体 / 小红书"><option value="社交媒体 / 抖音"><option value="社交媒体 / B站"><option value="社交媒体 / 微博"><option value="聊天 / 微信"><option value="直播"><option value="游戏"><option value="网页"><option value="相册"></datalist></label>
             </div>
+            <div class="photoFields" id="photoFields" hidden>
+              <div class="photoPrompt"><span>风景复刻</span><p>知道地点时先告诉拾忆，不必等待识图也能保存成计划。</p></div>
+              <div class="metaGrid">
+                <label>这是哪里？<input id="place" maxlength="100" placeholder="例如：大理洱海西岸"></label>
+                <label>想怎么复刻？<input id="photoPlan" maxlength="240" placeholder="例如：傍晚去，站在栏杆左侧拍同款构图"></label>
+              </div>
+            </div>
+            <div class="reminderBuilder">
+              <label>回访方式<select id="revisit"><option value="none">不用提醒</option><option value="once">仅一次</option><option value="interval">每隔几天</option><option value="weekly">每周固定</option><option value="curve">学习遗忘曲线</option></select></label>
+              <label id="manualWhenWrap" hidden>首次提醒时间<input id="manualWhen" type="datetime-local"></label>
+              <label id="intervalWrap" hidden>间隔天数<input id="intervalDays" type="number" min="1" max="365" value="3"></label>
+              <label id="weekdayWrap" hidden>每周哪一天<select id="weekday"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="0">周日</option></select></label>
+              <label id="weeklyTimeWrap" hidden>几点提醒<input id="weeklyTime" type="time" value="09:00"></label>
+            </div>
+            <p class="curveHint" id="curveHint" hidden>学习内容将按第1、3、7、14、30天重新出现。</p>
           </div>
-          <label class="revisitLabel">什么时候希望它再出现？
-            <select id="revisit"><option>不用提醒</option><option>今晚</option><option>三天后</option><option>下周</option><option>一个月后</option></select>
-          </label>
-        </div>
+        </details>
 
         <div class="composerfoot">
           <span id="savehint">保存内容，也保存你当时的目的。</span>
@@ -123,7 +137,7 @@
     <div class="paneltop"><div><p class="eyebrow">YOUR MEMORY SPACE</p><h2 id="paneltitle">全部记忆</h2></div><button data-close="panel" aria-label="关闭侧栏">×</button></div>
     <div id="panelbody"></div>
   </dialog>
-  <dialog id="detail">
+  <dialog id="detail" class="pageDialog">
     <div class="modalhead"><h2>这段记忆</h2><button data-close="detail" aria-label="关闭详情">×</button></div>
     <div id="detailbody"></div>
   </dialog>
