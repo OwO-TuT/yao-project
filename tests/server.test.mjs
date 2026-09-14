@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {TestBucket} from './bucket.mjs';
+globalThis.ASSETS={'/index.html':{encoding:'utf8',body:'<!doctype html><title>拾忆</title>',type:'text/html; charset=utf-8'}};
 function request(path,{uid='alice',method='GET',body,origin='https://test.invalid'}={}){const headers={};if(uid)headers['oai-authenticated-user-id']=uid;if(method!=='GET')headers.origin=origin;if(body&&!(body instanceof FormData))headers['content-type']='application/json';return new Request('https://test.invalid/api/'+path,{method,headers,body:body instanceof FormData?body:body?JSON.stringify(body):undefined});}
 const env=()=>({BUCKET:new TestBucket()});
 async function save(e,text='日语学习的备注'){const f=new FormData();f.set('text',text);const res=await worker.fetch(request('memories',{method:'POST',body:f}),e);assert.equal(res.status,201);return res.json();}
+test('public demo shell is available while private APIs still require login',async()=>{const e=env();const page=await worker.fetch(new Request('https://test.invalid/'),e);assert.equal(page.status,200);assert.match(await page.text(),/拾忆/);assert.equal((await worker.fetch(request('me',{uid:null}),e)).status,401)});
 test('requires authenticated identity and rejects cross-origin writes',async()=>{const e=env();assert.equal((await worker.fetch(request('memories',{uid:null}),e)).status,401);assert.equal((await worker.fetch(request('memories',{method:'POST',origin:'https://evil.invalid'}),e)).status,403)});
 test('records survive a new handler and are isolated by owner',async()=>{const e=env(),r=await save(e);const a=await(await worker.fetch(request('memories'),e)).json();assert.equal(a.items[0].id,r.id);const b=await(await worker.fetch(request('memories',{uid:'bob'}),e)).json();assert.equal(b.items.length,0);assert.equal((await worker.fetch(request('memories/'+r.id,{uid:'bob',method:'PATCH',body:{title:'changed'}}),e)).status,404)});
 test('link and extraction-code note survive without opening target',async()=>{const e=env(),r=await save(e,'网盘 https://example.com/share?a=1\n提取码 1234');assert.deepEqual(r.links,['https://example.com/share?a=1']);assert.match(r.text,/1234/);assert.equal(r.kind,'link')});
