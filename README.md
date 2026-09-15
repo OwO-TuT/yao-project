@@ -2,18 +2,18 @@
 
 当前版本实现简洁收集入口、文字/链接/图片/录音保存、关键词检索、资料编辑、主题关联、回收站恢复及行动计划。生产运行于 Sites Worker，使用平台身份头及 R2 保存用户资料。
 
-## 作业公开演示版（GitHub + Cloudflare Pages）
+## 作业公开演示版（GitHub + Cloudflare Workers）
 
 项目同时提供一个不依赖 ChatGPT 登录的公开演示版本。运行 `npm run build:pages` 会生成 `dist-pages/`：访问者打开首页后直接进入老师演示空间，可以体验保存、搜索、行动计划、图片预览、删除和恢复。演示数据只保留在当前浏览器页面中，刷新即重置，不会产生 AI 接口费用，也不会读取私人数据。
 
-在 Cloudflare Pages 连接此 GitHub 仓库时使用以下设置：
+在 Cloudflare Workers 连接此 GitHub 仓库时使用以下设置：
 
+- Project name：`shiyi-memory`
 - Production branch：`main`
-- Framework preset：`None`
 - Build command：`npm run build:pages`
-- Build output directory：`dist-pages`
+- Deploy command：`npx wrangler deploy`
 
-第一次部署成功后，在 Pages 项目的 Custom domains 中添加 `sungongqin.icu`。根域名需要由同一个 Cloudflare 账号管理该域名区域并使用 Cloudflare 名称服务器；Cloudflare 会在确认后创建所需的 DNS 记录和 HTTPS 证书。
+`wrangler.jsonc` 会把 `dist-pages/` 作为静态网站资源上传。第一次部署成功后，在 Worker 的 Custom domains 中添加 `sungongqin.icu`。根域名需要由同一个 Cloudflare 账号管理该域名区域并使用 Cloudflare 名称服务器；Cloudflare 会在确认后创建所需的 DNS 记录和 HTTPS 证书。
 
 ## 开发
 
