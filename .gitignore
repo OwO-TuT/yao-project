@@ -1,6 +1,7 @@
 .sites-runtime/
 work/
 dist-pages/
+.wrangler/
 .env
 .env.*
 !.env.example

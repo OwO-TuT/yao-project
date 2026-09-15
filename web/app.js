@@ -7,8 +7,13 @@ const icons={text:'文',link:'链',image:'图',audio:'音'};
 const types={text:'文字',link:'链接',image:'图片',audio:'录音'};
 const weekNames=['周日','周一','周二','周三','周四','周五','周六'];
 let records=[],me=null,mode='text',selectedIntent='留作参考',intentTouched=false,attachment=null,attachmentURL=null,view='library',filter='全部',panelQuery='',recorder=null,stream=null,recordTimer=null,recordClock=null,saving=false,tickerTimer=null,tickerIndex=0,demoMode=false;
+const syncStorageKey='shiyi-private-sync-key-v1';
+const incomingSyncKey=location.hash.match(/^#sync=([A-Za-z0-9_-]{43})$/)?.[1]||'';
+if(incomingSyncKey){localStorage.setItem(syncStorageKey,incomingSyncKey);history.replaceState(null,'',location.pathname+location.search)}
+let syncKey=incomingSyncKey||localStorage.getItem(syncStorageKey)||'';
 const hostedTeacherDemo=document.documentElement.dataset.appMode==='teacher-demo';
-const forceTeacherDemo=hostedTeacherDemo||new URLSearchParams(location.search).get('demo')==='teacher';
+const explicitTeacherDemo=new URLSearchParams(location.search).get('demo')==='teacher';
+const forceTeacherDemo=explicitTeacherDemo||(hostedTeacherDemo&&!syncKey);
 const demoObjectUrls=[];
 const storedFileUrls=new Map();
 
@@ -51,11 +56,12 @@ function localValue(date){const d=new Date(date);d.setMinutes(d.getMinutes()-d.g
 function formatWhen(value){if(!value||!Number.isFinite(Date.parse(value)))return '尚未安排';const d=new Date(value);return `${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
 function intentOf(r){return r.intentDetail||({'只收藏':'留作参考','稍后看或试':'想试试','学习':'想学','待行动':'想做'}[r.intent]||r.intent||'留作参考')}
 function topicOf(r){return !r.topic||r.topic==='未分类'?'日常收藏':r.topic}
-async function api(path,options={}){const res=await fetch('/api/'+path,options);let data;try{data=await res.json()}catch{throw new Error('服务暂时不可用，请稍后重试')}if(!res.ok){const error=new Error(data.error||'操作失败，请重试');error.status=res.status;throw error}return data}
+async function api(path,options={}){const headers=new Headers(options.headers||{});if(syncKey)headers.set('authorization','Bearer '+syncKey);const res=await fetch('/api/'+path,{...options,headers});let data;try{data=await res.json()}catch{throw new Error('服务暂时不可用，请稍后重试')}if(!res.ok){const error=new Error(data.error||'操作失败，请重试');error.status=res.status;throw error}return data}
 async function storedFileUrl(id,retry=false){
   if(retry&&storedFileUrls.has(id)){URL.revokeObjectURL(storedFileUrls.get(id));storedFileUrls.delete(id)}
   if(storedFileUrls.has(id))return storedFileUrls.get(id);
-  const res=await fetch(`/api/memories/${encodeURIComponent(id)}/file`,{credentials:'include',cache:'no-store'});
+  const headers=new Headers();if(syncKey)headers.set('authorization','Bearer '+syncKey);
+  const res=await fetch(`/api/memories/${encodeURIComponent(id)}/file`,{credentials:'include',cache:'no-store',headers});
   if(!res.ok){let message='原始文件暂时无法读取，请稍后重试';try{message=(await res.json()).error||message}catch{}if(res.status===401)message='登录状态已失效，请重新登录后读取原始文件';if(res.status===404)message='没有找到原始文件，请重新上传这份资料';throw new Error(message)}
   const blob=await res.blob();if(!blob.size||!blob.type.match(/^(image|audio|video)\//))throw new Error('读取到的文件格式不正确，请重新上传');
   const url=URL.createObjectURL(blob);storedFileUrls.set(id,url);return url;
@@ -65,7 +71,7 @@ async function loadStoredMedia(r,retry=false){const mount=$(`media-${r.id}`);if(
 async function refresh(){if(demoMode){updateTicker();if($('panel').open)renderPanel();return}const data=await api('memories');records=data.items;updateTicker();if($('panel').open)renderPanel()}
 async function init(){
   if(forceTeacherDemo)activateTeacherDemo();
-  else try{me=await api('me');$('connection').textContent='私人空间 · 已登录';$('banner').textContent='输入一句话即可保存；拾忆会尝试理解任务和时间，你也可以手动修改。';await refresh()}catch(e){if(e.status===401)activateTeacherDemo();else{$('connection').textContent='空间暂时不可用';$('banner').textContent=e.message;updateTicker()}}
+  else try{me=await api('me');$('connection').textContent=me.auth==='sync'?'私人同步 · 已连接':'私人空间 · 已登录';$('banner').textContent=me.auth==='sync'?'这是一份云端同步资料：在电脑保存后，手机刷新即可看到。':'输入一句话即可保存；拾忆会尝试理解任务和时间，你也可以手动修改。';await refresh()}catch(e){if(e.status===401&&hostedTeacherDemo){localStorage.removeItem(syncStorageKey);syncKey='';activateTeacherDemo();$('banner').textContent='私人同步链接已失效，已返回老师演示空间。'}else if(e.status===401)activateTeacherDemo();else{$('connection').textContent='空间暂时不可用';$('banner').textContent=e.message;updateTicker()}}
   tickerTimer=setInterval(updateTicker,5000);updateReminderInputs()
 }
 
@@ -203,7 +209,23 @@ async function record(){if(recorder?.state==='recording'){recorder.stop();return
 
 function updateTicker(){const tasks=records.filter(r=>!r.deletedAt&&r.reminder&&r.reminder.status!=='已完成').sort((a,b)=>Date.parse(a.reminder.when)-Date.parse(b.reminder.when));if(!tasks.length){$('tickerText').textContent=demoMode?'演示空间 · 试着保存一条带时间的任务':'演示：明早 09:00 · 去驿站取快递';return}const r=tasks[tickerIndex%tasks.length];tickerIndex++;$('tickerText').textContent=`${Date.parse(r.reminder.when)<=Date.now()?'等待确认':formatWhen(r.reminder.when)} · ${r.title}`}
 function advanceReminder(r){const rem={...r.reminder};if(rem.mode==='interval'){const d=new Date(rem.when);d.setDate(d.getDate()+(Number(rem.intervalDays)||1));rem.when=localValue(d);return{reminder:rem,lifeStatus:'保存中'}}if(rem.mode==='weekly'){const d=new Date(rem.when);d.setDate(d.getDate()+7);rem.when=localValue(d);return{reminder:rem,lifeStatus:'保存中'}}if(rem.mode==='curve'&&Array.isArray(rem.schedule)){const next=(Number(rem.currentStep)||0)+1;if(next<rem.schedule.length){rem.currentStep=next;rem.when=rem.schedule[next];return{reminder:rem,lifeStatus:'保存中'}}}rem.status='已完成';return{reminder:rem,lifeStatus:'已完成'}}
-function openAccount(){const demoSignin=hostedTeacherDemo?'':'<a class="signin" href="/signin-with-chatgpt?return_to=%2F" target="_top">登录正式私人空间</a>';const identity=demoMode?`<div class="accountcard"><b>免登录演示空间</b><p>示例资料和本次操作只保留在当前页面，刷新后自动重置，不会读取或混入任何人的私人资料。</p>${demoSignin}</div>`:`<div class="accountcard"><b>${me?'已登录 · 私人空间':'登录 / 首次使用'}</b><p>${me?esc(me.email):'首次通过 ChatGPT 登录后，即可使用账号空间。'}</p>${me?'<a href="/signout-with-chatgpt?return_to=%2F" target="_top">退出登录</a>':'<a class="signin" href="/signin-with-chatgpt?return_to=%2F" target="_top">使用 ChatGPT 登录</a>'}<p>文字、图片与行动计划按账号隔离保存。</p></div>`;$('accountbody').innerHTML=`${identity}<div class="accountcard"><b>输入理解与提醒</b><p>“明天、后天、三天后、下周”等常用时间由网页规则识别，不使用 AI。支持仅一次、每隔几天、每周固定和学习遗忘曲线。</p><p>当前提醒显示在网页内，演示版暂不发送手机系统通知。</p></div><div class="accountcard"><b>单张照片识别 · ${me?.aiEnabled?'可以使用':'演示版暂未接入'}</b><p>可以描述画面与构图；地点仍以你填写的信息为准。它不包含 AI 资料搜索。</p></div><div class="accountcard"><b>数据可带走</b><p>删除先进入回收站，也可以批量选择恢复。</p><button id="export" ${!me?'disabled':''}>${demoMode?'导出演示资料':'导出文字资料'}</button></div>`;if($('export'))$('export').onclick=()=>{const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=demoMode?'拾忆-演示资料.json':'拾忆-文字资料.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);notify('文字资料已导出')};show('accountDialog')}
+function openAccount(){
+  let identity;
+  if(me?.auth==='sync'){
+    identity=`<div class="accountcard syncCard"><div class="accountStatus"><span aria-hidden="true"></span><b>个人云端同步已连接</b></div><p>你在电脑保存的文字、链接和行动计划，手机刷新后就能看到。</p><button id="copySyncLink" class="signin full">复制手机同步链接</button><p class="syncWarning">这个链接相当于你的私人钥匙。只发给自己的设备，不要交给老师或分享到群里。</p><button id="leaveSync" class="full">仅退出这台设备</button></div>`;
+  }else if(demoMode){
+    const personalHint=hostedTeacherDemo?'<p>私人同步空间通过一条只属于你的邀请链接进入；老师打开公开网址时仍只会看到演示资料。</p>':'<a class="signin" href="/signin-with-chatgpt?return_to=%2F" target="_top">登录正式私人空间</a>';
+    identity=`<div class="accountcard"><b>免登录演示空间</b><p>示例资料和本次操作只保留在当前页面，刷新后自动重置，不会读取或混入任何人的私人资料。</p>${personalHint}</div>`;
+  }else{
+    identity=`<div class="accountcard"><b>${me?'已登录 · 私人空间':'登录 / 首次使用'}</b><p>${me?esc(me.email):'首次通过 ChatGPT 登录后，即可使用账号空间。'}</p>${me?'<a href="/signout-with-chatgpt?return_to=%2F" target="_top">退出登录</a>':'<a class="signin" href="/signin-with-chatgpt?return_to=%2F" target="_top">使用 ChatGPT 登录</a>'}<p>文字、图片与行动计划按账号隔离保存。</p></div>`;
+  }
+  const storageText=me?.auth==='sync'?(me.fileStorageReady?'文字、图片和录音都可以在设备间同步。':'文字、链接和行动计划已经云端同步；图片与录音空间稍后再开，不影响作业演示。'):'删除先进入回收站，也可以批量选择恢复。';
+  $('accountbody').innerHTML=`${identity}<div class="accountcard"><b>输入理解与提醒</b><p>“明天、后天、三天后、下周”等常用时间由网页规则识别，不使用 AI。支持仅一次、每隔几天、每周固定和学习遗忘曲线。</p><p>当前提醒显示在网页内，暂不发送手机系统通知。</p></div><div class="accountcard"><b>单张照片识别 · ${me?.aiEnabled?'可以使用':'作业版暂未接入'}</b><p>后续可以接入低成本识图；目前地点和复刻计划由你填写，演示结果会清楚标为示例。</p></div><div class="accountcard"><b>存储状态与导出</b><p>${storageText}</p><button id="export" ${!me?'disabled':''}>${demoMode?'导出演示资料':'导出文字资料'}</button></div>`;
+  if($('copySyncLink'))$('copySyncLink').onclick=async()=>{const url=`${location.origin}${location.pathname}#sync=${syncKey}`;await navigator.clipboard.writeText(url);notify('私人同步链接已复制，可以发到自己的手机打开')};
+  if($('leaveSync'))$('leaveSync').onclick=()=>{localStorage.removeItem(syncStorageKey);syncKey='';location.assign(location.origin+location.pathname)};
+  if($('export'))$('export').onclick=()=>{const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=demoMode?'拾忆-演示资料.json':'拾忆-文字资料.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);notify('文字资料已导出')};
+  show('accountDialog');
+}
 
 document.addEventListener('change',e=>{if(e.target.matches('[data-trash-select]'))updateTrashButton()});
 document.addEventListener('click',async e=>{

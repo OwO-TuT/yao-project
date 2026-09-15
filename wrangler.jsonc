@@ -1,8 +1,19 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "shiyi-memory",
+  "main": "./src/worker.js",
   "compatibility_date": "2026-09-15",
   "assets": {
-    "directory": "./dist-pages"
-  }
+    "directory": "./dist-pages",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shiyi-memory-db",
+      "database_id": "57272178-71dc-4050-b711-6921b61945ff",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
