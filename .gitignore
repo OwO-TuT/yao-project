@@ -1,5 +1,6 @@
 .sites-runtime/
 work/
+dist-pages/
 .env
 .env.*
 !.env.example
