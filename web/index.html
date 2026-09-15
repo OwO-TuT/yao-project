@@ -44,6 +44,7 @@
           <button data-mode="image">图片 / 截图</button>
           <button data-mode="audio">声音</button>
         </div>
+        <p class="capabilityNote" id="uploadAvailability" role="status" hidden>图片和录音云端空间尚未开通，本阶段可先保存文字、链接和行动计划。</p>
 
         <div id="attachmentArea" hidden>
           <label class="filepick" id="filepick">
@@ -107,7 +108,7 @@
         </div>
       </div>
 
-      <p class="privacy">资料按账号隔离保存 · 关键词找回不调用 AI · 照片识别只在主动点击时运行</p>
+      <p class="privacy" id="privacyLine">资料按账号隔离保存 · 关键词找回不调用 AI · 照片识别只在主动点击时运行</p>
 
       <div class="featureGrid" aria-label="主要入口">
         <button data-focus-capture><span class="featureNo">01</span><strong>快速存下</strong><small>留下内容和目的</small></button>

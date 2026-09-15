@@ -69,10 +69,19 @@ async function storedFileUrl(id,retry=false){
 function mediaMarkup(r,url){return r.kind==='image'?`<button type="button" class="mediaZoom" data-zoom="${esc(url)}" data-zoom-alt="${esc(r.title)}" aria-label="放大查看 ${esc(r.title)}"><img class="media" src="${esc(url)}" alt="${esc(r.title)}"></button>`:`<audio controls src="${esc(url)}"></audio>`}
 async function loadStoredMedia(r,retry=false){const mount=$(`media-${r.id}`);if(!mount)return;mount.className='mediaStatus';mount.setAttribute('role','status');mount.innerHTML=`<span class="mediaSpinner" aria-hidden="true"></span><p>正在安全读取${r.kind==='image'?'原始图片':'原始录音'}…</p>`;try{const url=await storedFileUrl(r.id,retry);const current=$(`media-${r.id}`);if(current)current.outerHTML=mediaMarkup(r,url)}catch(e){const current=$(`media-${r.id}`);if(current){current.className='mediaStatus mediaError';current.setAttribute('role','alert');current.innerHTML=`<strong>原始文件没有加载出来</strong><p>${esc(e.message)}</p><button class="smallbtn" data-retry-media="${esc(r.id)}">重新读取</button>`}}}
 async function refresh(){if(demoMode){updateTicker();if($('panel').open)renderPanel();return}const data=await api('memories');records=data.items;updateTicker();if($('panel').open)renderPanel()}
+function updateCapabilityControls(){
+  const fileUnavailable=me?.auth==='sync'&&!me.fileStorageReady;
+  const labels={image:fileUnavailable?'图片 / 截图 · 未开通':'图片 / 截图',audio:fileUnavailable?'声音 · 未开通':'声音'};
+  document.querySelectorAll('[data-mode="image"],[data-mode="audio"]').forEach(button=>{button.disabled=fileUnavailable;button.textContent=labels[button.dataset.mode]});
+  $('uploadAvailability').hidden=!fileUnavailable;
+  if(fileUnavailable&&mode!=='text')switchMode('text');
+  if(fileUnavailable){$('savehint').textContent='文字、链接和行动计划会云端同步。图片与录音暂未启用。';$('privacyLine').textContent='文字、链接和行动计划已云端同步 · 图片与录音暂未启用 · 关键词找回不调用 AI'}
+  else if(demoMode)$('privacyLine').textContent='当前为免登录演示 · 操作刷新后重置 · 不调用真实 AI';
+}
 async function init(){
   if(forceTeacherDemo)activateTeacherDemo();
   else try{me=await api('me');$('connection').textContent=me.auth==='sync'?'私人同步 · 已连接':'私人空间 · 已登录';$('banner').textContent=me.auth==='sync'?'这是一份云端同步资料：在电脑保存后，手机刷新即可看到。':'输入一句话即可保存；拾忆会尝试理解任务和时间，你也可以手动修改。';await refresh()}catch(e){if(e.status===401&&hostedTeacherDemo){localStorage.removeItem(syncStorageKey);syncKey='';activateTeacherDemo();$('banner').textContent='私人同步链接已失效，已返回老师演示空间。'}else if(e.status===401)activateTeacherDemo();else{$('connection').textContent='空间暂时不可用';$('banner').textContent=e.message;updateTicker()}}
-  tickerTimer=setInterval(updateTicker,5000);updateReminderInputs()
+  updateCapabilityControls();tickerTimer=setInterval(updateTicker,5000);updateReminderInputs()
 }
 
 function inferIntent(text){if(/必须|一定要|务必|提醒我|取快递|交作业|截止|别忘|记得去/.test(text))return '必做';if(/备用|备份|以防|电子版|找不到/.test(text))return '备用';if(/学习|复习|背诵|日语|口诀|考试/.test(text))return '想学';if(/购买|下单|想买|商品|比价/.test(text))return '想买';if(/复刻|下次想|想去|计划去/.test(text))return '想做';if(/好笑|搞笑|哈哈/.test(text))return '只是好笑';if(/试试|体验|听听|看看/.test(text))return '想试试';return null}
@@ -183,7 +192,7 @@ function reminder(r){
 }
 function deleteRecord(id){const r=get(id);if(!r||r.demo)return;show('confirm');$('confirmDelete').onclick=async()=>{$('confirmDelete').disabled=true;try{await patch(id,{deleted:true});$('confirm').close();$('detail').close();notify('已移到回收站，可随时恢复')}catch(e){notify(e.message)}finally{$('confirmDelete').disabled=false}}}
 
-function switchMode(next){if(recorder?.state==='recording'){notify('先停止录音，再切换输入方式');return}mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));$('attachmentArea').hidden=mode==='text';$('recordArea').hidden=mode!=='audio';$('photoFields').hidden=mode!=='image';$('file').accept=mode==='image'?'image/png,image/jpeg,image/webp':'audio/*';$('filelabel').textContent=mode==='image'?'选择图片，或拖到这里':'选择已有录音，也可以直接录制';$('thought').placeholder=mode==='text'?'直接说清楚内容和要求，例如：明天早上提醒我取快递…':mode==='image'?'说明这张图是什么、在哪里看到、为什么想留下…':'给这段声音补充一句说明…';$('savehint').textContent=demoMode?'演示操作只保留在当前页面，刷新后重置。':'只需点击一次，内容、目的和提醒会一起保存。';clearAttachment()}
+function switchMode(next){if(next!=='text'&&me?.auth==='sync'&&!me.fileStorageReady){notify('图片与录音云端空间尚未开通，本阶段请先保存文字或链接');return}if(recorder?.state==='recording'){notify('先停止录音，再切换输入方式');return}mode=next;document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));$('attachmentArea').hidden=mode==='text';$('recordArea').hidden=mode!=='audio';$('photoFields').hidden=mode!=='image';$('file').accept=mode==='image'?'image/png,image/jpeg,image/webp':'audio/*';$('filelabel').textContent=mode==='image'?'选择图片，或拖到这里':'选择已有录音，也可以直接录制';$('thought').placeholder=mode==='text'?'直接说清楚内容和要求，例如：明天早上提醒我取快递…':mode==='image'?'说明这张图是什么、在哪里看到、为什么想留下…':'给这段声音补充一句说明…';$('savehint').textContent=demoMode?'演示操作只保留在当前页面，刷新后重置。':me?.auth==='sync'&&!me.fileStorageReady?'文字、链接和行动计划会云端同步。图片与录音暂未启用。':'只需点击一次，内容、目的和提醒会一起保存。';clearAttachment()}
 function clearAttachment(){attachment=null;if(attachmentURL)URL.revokeObjectURL(attachmentURL);attachmentURL=null;$('attachmentPreview').innerHTML='';$('file').value=''}
 function setAttachment(file){if(file.size>10*1024*1024){notify('文件需小于 10 MB');return}const image=['image/png','image/jpeg','image/webp'].includes(file.type),audio=/^(audio\/|video\/webm)/.test(file.type);if(!image&&!audio){notify('请选择 PNG、JPG、WebP 图片或音频');return}if(recorder?.state==='recording'){notify('请先停止录音');return}if(mode!==(image?'image':'audio'))switchMode(image?'image':'audio');clearAttachment();attachment=file;attachmentURL=URL.createObjectURL(file);$('attachmentPreview').innerHTML=(image?`<button type="button" class="previewZoom" data-zoom-preview aria-label="放大查看待保存图片"><img src="${attachmentURL}" alt="待保存图片"></button>`:`<audio controls src="${attachmentURL}"></audio>`)+`<button id="removeFile" class="smallbtn">移除附件</button>`;$('removeFile').onclick=clearAttachment}
 

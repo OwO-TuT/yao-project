@@ -13,7 +13,7 @@
 - Build command：`npm run build:pages`
 - Deploy command：`npx wrangler deploy`
 
-`wrangler.jsonc` 会把 `dist-pages/` 作为静态网站资源上传。第一次部署成功后，在 Worker 的 Custom domains 中添加 `sungongqin.icu`。根域名需要由同一个 Cloudflare 账号管理该域名区域并使用 Cloudflare 名称服务器；Cloudflare 会在确认后创建所需的 DNS 记录和 HTTPS 证书。
+`wrangler.jsonc` 会把 `dist-pages/` 作为静态网站资源上传。目前使用 Cloudflare 免费提供的 `workers.dev` 地址，不绑定自定义域名。公开地址只用于老师演示；个人空间通过本地生成的私人同步链接进入，链接中的钥匙不提交到 GitHub。
 
 ## 开发
 
@@ -22,6 +22,8 @@
 运行 `npm test` 执行服务端用例。前端源文件在 `web/`，Worker 在 `src/worker.js`；构建产物在 `dist/server/index.js`。构建把界面资源嵌入 Worker，无外部 CDN 依赖。
 
 ## 线上配置
+
+Cloudflare 版本使用 D1 保存文字、链接与行动计划，并通过 `SYNC_KEY_HASH` 校验私人同步链接。原始钥匙只保存在 Git 忽略的 `work/secrets/` 中。当前 Cloudflare R2 尚未启用，因此私人同步空间会提前禁用图片与录音入口；公开教师演示仍可在当前页面体验图片预览，刷新后重置。
 
 `.openai/hosting.json` 绑定现有私有 Site 和 `BUCKET`，由平台提供 R2。所有资料接口在服务端检查平台转发的用户身份；记录和文件均使用用户哈希前缀。不能将该 Worker 直接暴露在允许访客伪造身份头的独立代理后面。
 
